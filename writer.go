@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -61,6 +62,7 @@ func writeImports(writer *bufio.Writer, f *fileContents) {
 	var keys []string
 	for key := range f.imprts {
 		keys = append(keys, key)
+		log.Println(key)
 	}
 
 	pkgImports := filter(keys, func(i string) bool {
@@ -84,9 +86,9 @@ func writeImportsSection(writer *bufio.Writer, f *fileContents, items []string) 
 	for _, file := range items {
 		fmt.Println(file)
 		imprts := f.imprts[file]
-		line := formatImportOnSingleLine(keyword, f.path, imprts)
+		line := formatImportOnSingleLine(keyword, f.path, file, imprts)
 		if len(line) > lineSplitLength {
-			line = formatMultilineImport(keyword, f.path, imprts)
+			line = formatMultilineImport(keyword, f.path, file, imprts)
 		}
 		writer.WriteString(line)
 		writer.WriteString("\n")
@@ -98,21 +100,21 @@ func writeImportsSection(writer *bufio.Writer, f *fileContents, items []string) 
 	}
 }
 
-func formatMultilineImport(keyword, fileImport string, imprts []string) string {
+func formatMultilineImport(keyword, fileImport, importName string, imprts []string) string {
 	res := fmt.Sprintf("%s {\n", keyword)
 
 	for _, symbol := range imprts {
 		res = fmt.Sprintf("%s  %s,\n", res, strings.TrimSpace(symbol))
 	}
-	return fmt.Sprintf("%s} from '%s';", res, fileImport)
+	return fmt.Sprintf("%s} from '%s';", res, importName)
 }
 
-func formatImportOnSingleLine(keyword, fileImport string, imprts []string) string {
+func formatImportOnSingleLine(keyword, fileImport, importName string, imprts []string) string {
 
 	symbols := strings.Join(imprts, ", ")
 	symbols = strings.TrimSpace(symbols)
 
-	line := fmt.Sprintf("%s { %s } from '%s';", keyword, symbols, fileImport)
+	line := fmt.Sprintf("%s { %s } from '%s';", keyword, symbols, importName)
 	return line
 }
 

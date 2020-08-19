@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -18,7 +19,7 @@ var files []string
 var importFiles map[string]*exportsInfo
 
 type exportsInfo struct {
-	total int
+	total   int
 	exports map[string]int
 }
 
@@ -45,8 +46,10 @@ func main() {
 	pkgExports = make(map[string]map[string][]string)
 
 	// Process all of the .ts files (not .spec.ts)
-	folder := "/Users/nwm/dev/a9/store-core/src/frontend/packages/core"
-	//folder := "/Users/nwm/dev/a9/core-sep/src/frontend/packages/store"
+	sourceFolder := "/Users/nwm/dev/a9/store-core"
+
+	folder := path.Join(sourceFolder, "src/frontend/packages/core")
+	base := path.Join(sourceFolder, "src/frontend/packages/store/src")
 	topLevel, _ = filepath.Abs(folder)
 
 	log.Println(topLevel)
@@ -69,17 +72,23 @@ func main() {
 	// 	}
 	// }
 
+	// Test file
+	// test := path.Join(folder, "src/features/dashboard/page-side-nav/page-side-nav.component.ts")
+	// f, err := readFileContents(test)
+	// if err != nil {
+	// 	log.Panic(err)
+	// }
+	// log.Println(f)
+	// replaceImports(f, base, "@stratosui/store")
+	// writeFile(f)
 
-	//test := "/Users/nwm/dev/a9/store-core/src/frontend/packages/cloud-foundry/src/shared/components/list/list-types/cf-select-users/cf-select-users-list-config.service.ts"
-
-	base := "/Users/nwm/dev/a9/store-core/src/frontend/packages/store/src"
-
+	// return
 
 	for _, file := range files {
 		f, _ := readFileContents(file)
 		replaceImports(f, base, "@stratosui/store")
+		writeFile(f)
 	}
-	//writeFile(f)
 	//writeContents(f)
 
 	// Now write all of the exports we need to add to the public-api file
@@ -94,16 +103,16 @@ func main() {
 			file = "./" + rel
 			sort.Strings(symbols)
 
-			line := formatImportOnSingleLine(keyword, file, symbols)
+			line := formatImportOnSingleLine(keyword, file, file, symbols)
 			if len(line) > lineSplitLength {
-				line = formatMultilineImport(keyword, file, symbols)
+				line = formatMultilineImport(keyword, file, file, symbols)
 			}
 			writer.WriteString(line)
 			writer.WriteString("\n")
-	
+
 			// fmt.Println(file)
 			// fmt.Println(symbols)
-		}		
+		}
 	}
 
 }
@@ -111,7 +120,7 @@ func main() {
 func getExportInfo(file string) *exportsInfo {
 	if _, ok := importFiles[file]; !ok {
 		ei := &exportsInfo{
-			total: 0,
+			total:   0,
 			exports: make(map[string]int),
 		}
 		importFiles[file] = ei
@@ -138,8 +147,8 @@ func readFileContents(filePath string) (*fileContents, error) {
 	scanner := bufio.NewScanner(file)
 
 	f := &fileContents{
-		path: filePath,
-		imprts:  make(map[string][]string),
+		path:     filePath,
+		imprts:   make(map[string][]string),
 		contents: nil,
 	}
 
@@ -192,7 +201,7 @@ func processFile(filePath string) error {
 			// Import statement
 			if strings.HasSuffix(txt, ";") {
 				// Single-line import
-				processImport(filePath, txt);
+				processImport(filePath, txt)
 			} else {
 				ln := txt
 				for {
@@ -226,16 +235,16 @@ func processImport(filePath, txt string) {
 		folder := filepath.Dir(filePath)
 		full := filepath.Join(folder, pkg)
 
-		if (!strings.HasPrefix(full, topLevel)) {
+		if !strings.HasPrefix(full, topLevel) {
 			info := getExportInfo(full)
 			info.total = info.total + 1
-			for _, export := range(strings.Split(exportNames, ",")) {
+			for _, export := range strings.Split(exportNames, ",") {
 				name := strings.TrimSpace(export)
 				if len(name) > 0 {
 					if _, ok := info.exports[name]; !ok {
 						info.exports[name] = 0
 					}
-					info.exports[name] = info.exports[name]+1
+					info.exports[name] = info.exports[name] + 1
 				}
 			}
 		}
@@ -258,7 +267,7 @@ func processFileImport(filePath string, f *fileContents, txt string) {
 		if _, ok := f.imprts[full]; !ok {
 			f.imprts[full] = make([]string, 0)
 		}
-		for _, export := range(strings.Split(exportNames, ",")) {
+		for _, export := range strings.Split(exportNames, ",") {
 			name := strings.TrimSpace(export)
 			if len(name) > 0 {
 				f.imprts[full] = append(f.imprts[full], name)

@@ -11,7 +11,6 @@ func replaceImports(f *fileContents, folder, pkg string) {
 	imprts := make(map[string][]string)
 
 	// Look for any imports that need replacing
-
 	for file, symbols := range f.imprts {
 		name := file
 		if strings.HasPrefix(file, ".") {
@@ -34,6 +33,13 @@ func replaceImports(f *fileContents, folder, pkg string) {
 			imprts[name] = append(imprts[name], symbol)
 		}
 	}
+
+	// for name, values := range imprts {
+	// 	log.Println(name)
+	// 	for _, v := range values {
+	// 		log.Println("  " + v)
+	// 	}
+	// }
 
 	// Replace imports
 	f.imprts = imprts
