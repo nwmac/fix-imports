@@ -75,6 +75,15 @@ func writeImports(writer *bufio.Writer, f *fileContents) {
 
 	writeImportsSection(writer, f, pkgImports)
 	writeImportsSection(writer, f, fileImports)
+
+	for _, line := range f.extras {
+		writer.WriteString(line)
+		writer.WriteString("\n")
+	}
+
+	if len(f.extras) > 0 {
+		writer.WriteString("\n")
+	}
 }
 
 func writeImportsSection(writer *bufio.Writer, f *fileContents, items []string) {

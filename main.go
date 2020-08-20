@@ -27,6 +27,7 @@ type fileContents struct {
 	// Map of imports from given files/locations
 	path     string
 	imprts   map[string][]string
+	extras   []string
 	contents []string
 }
 
@@ -39,14 +40,21 @@ var topLevel string
 
 func main() {
 
-	importRegex = regexp.MustCompile("^import\\s+{\\s+([a-zA-Z,\\s]*)\\s+}\\s+from\\s+'(.*)';")
+	importRegex = regexp.MustCompile("^import\\s+{\\s+([a-z_A-Z0-9,\\s]*)\\s+}\\s+from\\s+'(.*)';")
 
 	importFiles = make(map[string]*exportsInfo)
 
 	pkgExports = make(map[string]map[string][]string)
 
+	log.Println("Fix Imports")
+
+	if len(os.Args) != 2 {
+		log.Println("Need source folder")
+		return
+	}
+
 	// Process all of the .ts files (not .spec.ts)
-	sourceFolder := "/Users/nwm/dev/a9/store-core"
+	sourceFolder := os.Args[1]
 
 	folder := path.Join(sourceFolder, "src/frontend/packages/core")
 	base := path.Join(sourceFolder, "src/frontend/packages/store/src")
@@ -73,7 +81,8 @@ func main() {
 	// }
 
 	// Test file
-	// test := path.Join(folder, "src/features/dashboard/page-side-nav/page-side-nav.component.ts")
+	// test := path.Join(folder, "src/shared/components/date-time/date-time.component.ts")
+
 	// f, err := readFileContents(test)
 	// if err != nil {
 	// 	log.Panic(err)
@@ -91,10 +100,20 @@ func main() {
 	}
 	//writeContents(f)
 
+	publicAPIFilePath := path.Join(base, "public-api.ts")
+	log.Println("Writing update public-api.ts to " + publicAPIFilePath)
+	publicAPIFile, err := os.OpenFile(publicAPIFilePath, os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Panicf("Error reading file %s", publicAPIFilePath)
+	}
+	defer publicAPIFile.Close()
+
 	// Now write all of the exports we need to add to the public-api file
 	keyword := "export"
-	writer := bufio.NewWriter(os.Stdout)
+	writer := bufio.NewWriter(publicAPIFile)
 	defer writer.Flush()
+
+	writer.WriteString("\n\n// Auto-generated from fiximports tool\n\n")
 
 	for pkg, pkgs := range pkgExports {
 		fmt.Println(pkg)
@@ -154,7 +173,6 @@ func readFileContents(filePath string) (*fileContents, error) {
 
 	for scanner.Scan() {
 		txt := scanner.Text()
-
 		if strings.HasPrefix(txt, "import ") {
 			// Import statement
 			if strings.HasSuffix(txt, ";") {
@@ -199,8 +217,10 @@ func processFile(filePath string) error {
 
 		if strings.HasPrefix(txt, "import ") {
 			// Import statement
+			fmt.Println(txt)
 			if strings.HasSuffix(txt, ";") {
 				// Single-line import
+				fmt.Println(txt)
 				processImport(filePath, txt)
 			} else {
 				ln := txt
@@ -273,5 +293,11 @@ func processFileImport(filePath string, f *fileContents, txt string) {
 				f.imprts[full] = append(f.imprts[full], name)
 			}
 		}
+	} else {
+		// Maybe its of form import * as from _;
+		fmt.Println("** IGNORE")
+		fmt.Println(txt)
+		f.extras = append(f.extras, txt)
+
 	}
 }

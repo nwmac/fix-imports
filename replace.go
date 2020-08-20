@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
 )
@@ -34,12 +35,12 @@ func replaceImports(f *fileContents, folder, pkg string) {
 		}
 	}
 
-	// for name, values := range imprts {
-	// 	log.Println(name)
-	// 	for _, v := range values {
-	// 		log.Println("  " + v)
-	// 	}
-	// }
+	for name, values := range imprts {
+		fmt.Println(name)
+		for _, v := range values {
+			fmt.Println("  " + v)
+		}
+	}
 
 	// Replace imports
 	f.imprts = imprts
